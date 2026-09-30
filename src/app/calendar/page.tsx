@@ -1,2 +1,2 @@
-import {CalendarWorkspace} from "@/components/project/calendar-workspace";
-export default async function CalendarPage({searchParams}:{searchParams:Promise<{date?:string}>}){const query=await searchParams;return <CalendarWorkspace initialDate={query.date}/>}
+import {CalendarWorkspace} from "@/components/project/calendar-workspace";import {defaultProject,resolveProject} from "@/lib/projects";
+export default async function CalendarPage({searchParams}:{searchParams:Promise<{date?:string;project?:string}>}){const query=await searchParams;const project=resolveProject(query.project??defaultProject.id);return <CalendarWorkspace initialDate={query.date} projectId={project.id}/>}
