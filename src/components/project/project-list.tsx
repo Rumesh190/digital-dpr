@@ -1,30 +1,19 @@
 "use client";
 
-import {ArrowRight,MapPin} from "lucide-react";
+import {ArrowRight,Check,MapPin} from "lucide-react";
 import {motion} from "motion/react";
 import {useRouter} from "next/navigation";
 import {useEffect,useState} from "react";
 import {DPR_CHANGE_EVENT,getDPR,todayISO} from "@/lib/dpr";
+import {getDefaultProjectId,setDefaultProjectId} from "@/lib/projects";
 import {transitions} from "@/lib/motion";
 import type {DPR,Project} from "@/types";
 
 type ProjectRecords=Record<string,DPR|null>;
 
 export function ProjectList({projects}:{projects:Project[]}){
- const router=useRouter();
- const[records,setRecords]=useState<ProjectRecords>({});
- useEffect(()=>{
-  const reload=()=>{const date=todayISO();setRecords(Object.fromEntries(projects.map(project=>[project.id,getDPR(project.id,date)])))};
-  const timer=window.setTimeout(reload,0);
-  window.addEventListener(DPR_CHANGE_EVENT,reload);
-  return()=>{window.clearTimeout(timer);window.removeEventListener(DPR_CHANGE_EVENT,reload)};
- },[projects]);
- return <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">{projects.map((project,index)=>{
-  const record=records[project.id]??null;
-  const state=record?.status==="submitted"?{label:"Submitted",tone:"bg-[#3f8f6b]"}:record?{label:"Draft",tone:"bg-[#e14d48]"}:{label:"Not started",tone:"bg-[#a1a1aa]"};
-  return <motion.button key={project.id} initial={{opacity:0,y:6}} animate={{opacity:1,y:0}} transition={{...transitions.reveal,delay:.05*index}} whileTap={{scale:.985}} whileHover={{y:-2}} onClick={()=>router.push(`/today?project=${project.id}`)} className="group min-h-[236px] cursor-pointer rounded-2xl border border-[#e4e4e7] bg-white p-5 text-left transition-[border-color,box-shadow] duration-150 hover:border-[#c7c7cd] hover:shadow-[0_8px_24px_rgba(24,24,27,.055)] lg:min-h-[214px] lg:rounded-[14px] lg:p-4">
-   <div className="flex items-start justify-between"><span className="grid size-11 place-items-center rounded-[10px] bg-[#f4f4f5] text-[12px] font-bold tracking-[.06em] text-[#71717a]">{project.code.slice(0,2)}</span><span className="grid size-10 place-items-center rounded-[10px] border border-[#e4e4e7] text-[#71717a] transition-all group-hover:translate-x-0.5 group-hover:border-[#18181b] group-hover:text-[#18181b]"><ArrowRight size={17}/></span></div>
-   <div className="mt-6 lg:mt-5"><h2 className="text-[18px] font-semibold tracking-[-.02em] lg:text-[15px]">{project.name}</h2><div className="mt-2 text-[14px] text-[#71717a] lg:text-[12px]">{project.workType}</div><div className="mt-2 inline-flex items-center gap-1.5 text-[13px] text-[#71717a] lg:text-[11px]"><MapPin size={14}/>{project.location}</div></div>
-   <div className="mt-6 flex items-end justify-between border-t border-[#e4e4e7] pt-4 lg:mt-5"><span><span className="block text-[12px] font-medium text-[#71717a] lg:text-[10px]">Today&apos;s DPR</span><span className="mt-1.5 flex items-center gap-2 text-[13px] font-semibold lg:text-[11px]"><i className={`size-2 rounded-full ${state.tone}`}/>{state.label}</span></span><ArrowRight size={17} className="text-[#a1a1aa] transition-transform group-hover:translate-x-0.5"/></div>
-  </motion.button>})}</div>;
+ const router=useRouter();const[records,setRecords]=useState<ProjectRecords>({});const[defaultId,setDefaultId]=useState<string|null>(null);const[notice,setNotice]=useState("");
+ useEffect(()=>{const reload=()=>{const date=todayISO();setRecords(Object.fromEntries(projects.map(project=>[project.id,getDPR(project.id,date)])));setDefaultId(getDefaultProjectId())};const timer=window.setTimeout(reload,0);window.addEventListener(DPR_CHANGE_EVENT,reload);return()=>{window.clearTimeout(timer);window.removeEventListener(DPR_CHANGE_EVENT,reload)}},[projects]);
+ const makeDefault=(project:Project)=>{if(!setDefaultProjectId(project.id))return;setDefaultId(project.id);setNotice(`${project.name} is now your default project`);window.setTimeout(()=>setNotice(""),2400)};
+ return <><p aria-live="polite" className={`mb-3 min-h-5 text-right text-[12px] font-semibold text-[#2f8f69] transition-opacity ${notice?"opacity-100":"opacity-0"}`}>{notice||"Default project updated"}</p><div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">{projects.map((project,index)=>{const record=records[project.id]??null;const isDefault=defaultId===project.id;const state=record?.status==="submitted"?{label:"Submitted",tone:"bg-[#3f8f6b]"}:record?{label:"Draft",tone:"bg-[#e14d48]"}:{label:"Not started",tone:"bg-[#a1a1aa]"};return <motion.article key={project.id} initial={{opacity:0,y:6}} animate={{opacity:1,y:0}} transition={{...transitions.reveal,delay:.05*index}} whileHover={{y:-2}} className="relative min-h-[236px] rounded-2xl border border-[#e4e4e7] bg-white p-5 transition-[border-color,box-shadow] duration-150 hover:border-[#c7c7cd] hover:shadow-[0_8px_24px_rgba(24,24,27,.055)] lg:min-h-[214px] lg:rounded-[14px] lg:p-4"><button onClick={()=>router.push(`/today?project=${project.id}`)} aria-label={`Open ${project.name}`} className="absolute inset-0 z-0 rounded-[inherit]"/><div className="pointer-events-none relative z-[1]"><div className="flex items-start justify-between gap-3"><span className="grid size-11 place-items-center rounded-[10px] bg-[#f4f4f5] text-[12px] font-bold tracking-[.06em] text-[#71717a]">{project.code.slice(0,2)}</span><div className="pointer-events-auto flex items-center gap-2">{isDefault?<span className="inline-flex h-8 items-center gap-1 rounded-full bg-[#eaf5ef] px-2.5 text-[11px] font-bold text-[#318566]"><Check size={12}/>Default</span>:<button onClick={()=>makeDefault(project)} className="focus-ring min-h-10 rounded-[9px] px-2.5 text-[11px] font-semibold text-[#71717a] hover:bg-[#f4f4f5] hover:text-[#25272d]">Set as default</button>}<span className="grid size-10 place-items-center rounded-[10px] border border-[#e4e4e7] text-[#71717a]"><ArrowRight size={17}/></span></div></div><div className="mt-6 lg:mt-5"><h2 className="text-[18px] font-semibold tracking-[-.02em] lg:text-[15px]">{project.name}</h2><div className="mt-2 text-[14px] text-[#71717a] lg:text-[12px]">{project.workType}</div><div className="mt-2 inline-flex items-center gap-1.5 text-[13px] text-[#71717a] lg:text-[11px]"><MapPin size={14}/>{project.location}</div></div><div className="mt-6 flex items-end justify-between border-t border-[#e4e4e7] pt-4 lg:mt-5"><span><span className="block text-[12px] font-medium text-[#71717a] lg:text-[10px]">Today&apos;s DPR</span><span className="mt-1.5 flex items-center gap-2 text-[13px] font-semibold lg:text-[11px]"><i className={`size-2 rounded-full ${state.tone}`}/>{state.label}</span></span></div></div></motion.article>})}</div></>
 }

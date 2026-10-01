@@ -2,7 +2,8 @@ import type {DPR,DPRStatus,TomorrowActivity} from "@/types";
 
 export const DPR_RECORDS_KEY="digital-dpr:records:v2";
 export const DPR_CHANGE_EVENT="digital-dpr:change";
-export const requiredSections=["work","manpower","materials","photos","tomorrowPlan"] as const;
+export const requiredSections=["work","manpower","materials","photos"] as const;
+export const REQUIRED_SECTION_COUNT=requiredSections.length;
 export type RequiredSection=typeof requiredSections[number];
 export type DPRRecords=Record<string,DPR>;
 
@@ -13,7 +14,7 @@ export const addDays=(value:string,days:number)=>{const date=parseISODate(value)
 export const formatDPRDate=(value:string,options:Intl.DateTimeFormatOptions={day:"numeric",month:"long",year:"numeric"})=>new Intl.DateTimeFormat("en-GB",options).format(parseISODate(value));
 export const recordKey=(projectId:string,date:string)=>`${projectId}:${date}`;
 
-export const sectionComplete=(dpr:DPR,key:RequiredSection)=>{
+export const sectionComplete=(dpr:DPR,key:RequiredSection|"tomorrowPlan")=>{
  if(key==="work")return dpr.work.length>0&&dpr.work.every(row=>!!row.activity&&row.planned>0&&typeof row.achieved==="number"&&row.achieved>=0);
  if(key==="manpower")return dpr.manpower.length>0&&dpr.manpower.every(row=>!!row.role&&row.inHouse+row.subcontractor>0);
  if(key==="materials")return dpr.materials.length>0&&dpr.materials.every(row=>!!row.material&&row.quantity>0);
@@ -22,7 +23,7 @@ export const sectionComplete=(dpr:DPR,key:RequiredSection)=>{
 };
 export const completedRequired=(dpr:DPR)=>requiredSections.filter(key=>sectionComplete(dpr,key)).length;
 export const completionPercent=(dpr:DPR)=>Math.round(completedRequired(dpr)/requiredSections.length*100);
-export const missingSections=(dpr:DPR)=>requiredSections.filter(key=>!sectionComplete(dpr,key));
+export const missingSections=(dpr:DPR):(RequiredSection|"tomorrowPlan")[]=>requiredSections.filter(key=>!sectionComplete(dpr,key));
 export const carryForwardPlan=(plan:TomorrowActivity[]):DPR["work"]=>plan.map(item=>({id:`work-${crypto.randomUUID()}`,activity:item.activity,unit:item.unit,planned:item.planned,achieved:null,remarks:item.remarks}));
 
 const submittedSeed:DPR={id:"dpr-commercial-tower-2026-09-28",projectId:"commercial-tower",date:"2026-09-28",status:"submitted",work:[{id:"work-seed",activity:"Cable Tray Installation",unit:"m",planned:100,achieved:75}],manpower:[{id:"mp-seed",role:"Electrician",inHouse:8,subcontractor:12}],materials:[{id:"mat-seed",material:"Cable Tray",unit:"m",quantity:75}],photos:[{id:"photo-seed",src:"/window.svg",name:"Site progress record"}],siteVisits:[],tomorrowPlan:[{id:"plan-seed-1",activity:"Cable Pulling",unit:"m",planned:60},{id:"plan-seed-2",activity:"Panel Installation",unit:"nos",planned:2}],generalRemarks:"",updatedAt:"2026-09-28T18:00:00.000Z"};
